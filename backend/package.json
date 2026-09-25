@@ -1,0 +1,48 @@
+{
+  "name": "ai-website-screening-agent",
+  "version": "1.0.0",
+  "description": "AI Website Screening Agent V1 for researching company websites, detecting configurable business triggers, scoring companies, and exporting structured CSV results.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "server": "node server.js",
+    "dev": "node src/index.js",
+    "test": "node tests/runLocalTests.js",
+    "test:local": "node tests/runLocalTests.js",
+    "test:trigger-detector": "node tests/testTriggerDetector.js",
+    "test:researcher": "node tests/testResearcher.js",
+    "test:validator": "node tests/testOutputValidator.js",
+    "test:score": "node tests/testScoreCalculator.js",
+    "test:formatter": "node tests/testResultFormatter.js",
+    "test:ai-client": "node tests/testGrokClient.js",
+    "test:quota": "node tests/testBatchQuotaHandling.js",
+    "test:csv-reader": "node tests/testCsvReader.js",
+    "test:csv-writer": "node tests/testCsvWriter.js",
+    "test:pipeline": "node tests/testPipelineIntegration.js",
+    "test:web-research": "node tests/testWebResearcher.js",
+    "test:grok-live": "node tests/testLiveGrokConnection.js"
+  },
+  "keywords": [
+    "ai",
+    "website-screening",
+    "company-research",
+    "lead-screening",
+    "nodejs",
+    "gemini",
+    "grok",
+    "automation",
+    "csv",
+    "trigger-detection"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "csv-parser": "^3.2.0",
+    "csv-writer": "^1.6.0",
+    "dotenv": "^17.2.2",
+    "express": "^5.2.1",
+    "multer": "^2.4.0",
+    "openai": "^6.9.1"
+  }
+}

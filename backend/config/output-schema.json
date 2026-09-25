@@ -1,0 +1,185 @@
+{
+  "type": "object",
+  "required": [
+    "website",
+    "company",
+    "business_type",
+    "services",
+    "team_size",
+    "detected_triggers",
+    "additional_triggers",
+    "evidence",
+    "reason",
+    "confidence"
+  ],
+  "properties": {
+    "website": {
+      "type": "string",
+      "description": "The company website that was researched."
+    },
+    "company": {
+      "type": "string",
+      "description": "The company name."
+    },
+    "business_type": {
+      "type": "string",
+      "description": "The primary type or industry of the company."
+    },
+    "services": {
+      "type": "array",
+      "description": "Main products or services provided by the company.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "team_size": {
+      "type": "string",
+      "description": "Estimated or publicly stated company/team size. Use 'Unknown' when reliable information is unavailable."
+    },
+    "detected_triggers": {
+      "type": "array",
+      "description": "All predefined triggers detected during research.",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "category",
+          "score",
+          "evidence"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the detected predefined trigger."
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "growth",
+              "pain_point",
+              "workflow_tool"
+            ],
+            "description": "Category of the detected trigger."
+          },
+          "score": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 10,
+            "description": "Predefined score of the detected trigger."
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "source",
+                "description"
+              ],
+              "properties": {
+                "source": {
+                  "type": "string",
+                  "description": "URL or name of the public source."
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Specific information from the source supporting the trigger."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "additional_triggers": {
+      "type": "array",
+      "description": "Relevant triggers discovered by AI that are not present in the predefined trigger configuration.",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "category",
+          "score",
+          "reason",
+          "evidence"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the newly discovered trigger."
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "growth",
+              "pain_point",
+              "workflow_tool"
+            ],
+            "description": "Category assigned to the new trigger."
+          },
+          "score": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 10,
+            "description": "Score assigned according to the scoring rules of the selected category."
+          },
+          "reason": {
+            "type": "string",
+            "description": "Why this newly discovered signal qualifies as a trigger."
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "source",
+                "description"
+              ],
+              "properties": {
+                "source": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "description": "Important public evidence found during company research.",
+      "items": {
+        "type": "object",
+        "required": [
+          "source",
+          "description"
+        ],
+        "properties": {
+          "source": {
+            "type": "string",
+            "description": "URL or name of the source."
+          },
+          "description": {
+            "type": "string",
+            "description": "Relevant information found in the source."
+          }
+        }
+      }
+    },
+    "reason": {
+      "type": "string",
+      "description": "Overall explanation of why the detected triggers were identified."
+    },
+    "confidence": {
+      "type": "string",
+      "enum": [
+        "High",
+        "Medium",
+        "Low"
+      ],
+      "description": "AI's confidence in the reliability of the screening findings."
+    }
+  }
+}

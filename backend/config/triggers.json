@@ -1,0 +1,182 @@
+{
+  "growth_triggers": [
+    {
+      "name": "Hiring rapidly",
+      "score": 8
+    },
+    {
+      "name": "Increasing clients",
+      "score": 8
+    },
+    {
+      "name": "Taking larger clients",
+      "score": 7
+    },
+    {
+      "name": "Expanding services",
+      "score": 7
+    },
+    {
+      "name": "Entering new markets",
+      "score": 7
+    },
+    {
+      "name": "Opening new locations",
+      "score": 8
+    },
+    {
+      "name": "Funding/investment",
+      "score": 6
+    },
+    {
+      "name": "Major growth announcement",
+      "score": 7
+    },
+    {
+      "name": "Acquired another agency/company",
+      "score": 9
+    },
+    {
+      "name": "Opened multiple departments",
+      "score": 8
+    },
+    {
+      "name": "Rapidly expanding/growing",
+      "score": 8
+    }
+  ],
+  "pain_point_triggers": [
+    {
+      "name": "Missed deadlines",
+      "score": 10
+    },
+    {
+      "name": "Project delays",
+      "score": 9
+    },
+    {
+      "name": "Project bottlenecks",
+      "score": 9
+    },
+    {
+      "name": "Poor handoffs",
+      "score": 8
+    },
+    {
+      "name": "Too many projects",
+      "score": 8
+    },
+    {
+      "name": "Lack of project visibility",
+      "score": 9
+    },
+    {
+      "name": "Resource allocation issues",
+      "score": 9
+    },
+    {
+      "name": "Communication problems",
+      "score": 8
+    },
+    {
+      "name": "Accountability problems",
+      "score": 8
+    },
+    {
+      "name": "Founder bottleneck",
+      "score": 9
+    },
+    {
+      "name": "Managers constantly following up",
+      "score": 9
+    },
+    {
+      "name": "Scattered information",
+      "score": 8
+    },
+    {
+      "name": "Manual reporting",
+      "score": 7
+    },
+    {
+      "name": "Too many meetings",
+      "score": 6
+    },
+    {
+      "name": "Remote-team coordination problems",
+      "score": 8
+    },
+    {
+      "name": "Team struggling with project management",
+      "score": 9
+    }
+  ],
+  "workflow_tool_triggers": [
+    {
+      "name": "Excel",
+      "score": 4
+    },
+    {
+      "name": "Google Sheets",
+      "score": 4
+    },
+    {
+      "name": "WhatsApp",
+      "score": 4
+    },
+    {
+      "name": "Slack",
+      "score": 3
+    },
+    {
+      "name": "Notion",
+      "score": 3
+    },
+    {
+      "name": "Trello",
+      "score": 4
+    },
+    {
+      "name": "Asana",
+      "score": 4
+    },
+    {
+      "name": "ClickUp",
+      "score": 4
+    },
+    {
+      "name": "Monday",
+      "score": 4
+    },
+    {
+      "name": "Jira",
+      "score": 4
+    },
+    {
+      "name": "Basecamp",
+      "score": 4
+    },
+    {
+      "name": "Wrike",
+      "score": 4
+    },
+    {
+      "name": "Teamwork",
+      "score": 4
+    },
+    {
+      "name": "Airtable",
+      "score": 4
+    }
+  ],
+  "additional_trigger_rules": {
+    "enabled": true,
+    "instruction": "If the AI discovers a relevant trigger that is not present in the predefined trigger lists, it must include the trigger in the result, classify it into the most appropriate category, and assign a score according to that category's scoring rules."
+  },
+  "scoring": {
+    "min_score": 0,
+    "max_score": 10,
+    "company_score_method": "average",
+    "no_trigger_score": 0
+  }
+}

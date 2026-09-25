@@ -1,0 +1,40 @@
+{
+  "request_timeout_ms": 30000,
+  "max_response_size_mb": 3,
+  "max_redirects": 5,
+  "max_research_text_length": 25000,
+  "max_additional_pages": 4,
+
+  "page_priorities": {
+    "about": 10,
+    "company": 10,
+    "who-we-are": 10,
+
+    "career": 10,
+    "careers": 10,
+    "jobs": 10,
+    "join-us": 10,
+    "join": 10,
+
+    "service": 8,
+    "services": 8,
+    "solution": 8,
+    "solutions": 8,
+
+    "news": 8,
+    "press": 8,
+    "announcement": 8,
+    "media": 8,
+
+    "blog": 7,
+    "insights": 7,
+    "articles": 7,
+
+    "case-study": 7,
+    "case-studies": 7,
+    "case_study": 7,
+    "casestudy": 7,
+
+    "contact": 4
+  }
+}
