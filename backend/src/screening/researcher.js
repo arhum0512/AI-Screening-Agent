@@ -98,6 +98,9 @@ Important:
 
 - Do not invent information.
 - Do not invent URLs.
+- Every evidence source must be one absolute http:// or https:// URL that appears in the supplied research.
+- Keep the source URL and description in their separate JSON fields; never append description text to source.
+- Do not use a source name, platform name, domain-only label, or Markdown link as an evidence source.
 - Do not assume a trigger without evidence.
 - Do not return company_score.
 - Do not return final_company_score.

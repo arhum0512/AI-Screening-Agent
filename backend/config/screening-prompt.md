@@ -412,6 +412,8 @@ Evidence must use this structure:
 "description": "Specific explanation of what the research shows."
 }
 
+`source` must be one complete absolute `http://` or `https://` URL from the supplied research. It must not contain a source title, Markdown, citation syntax, or any part of the description. Keep the URL and description in their separate JSON fields.
+
 Use source URLs that are actually present in the supplied research.
 
 Do not invent URLs.
@@ -630,7 +632,7 @@ Every item in `detected_triggers` must use:
 "score": 0,
 "evidence": [
 {
-"source": "string",
+"source": "absolute http:// or https:// URL",
 "description": "string"
 }
 ]
@@ -657,7 +659,7 @@ Every item in `additional_triggers` must use:
 "reason": "string",
 "evidence": [
 {
-"source": "string",
+"source": "absolute http:// or https:// URL",
 "description": "string"
 }
 ]
@@ -674,7 +676,7 @@ The top-level `evidence` array should contain the most important evidence suppor
 Use:
 
 {
-"source": "string",
+"source": "absolute http:// or https:// URL",
 "description": "string"
 }
 

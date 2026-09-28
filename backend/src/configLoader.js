@@ -8,9 +8,8 @@ const path = require("path");
  * The default screening prompt is always preserved.
  *
  * If the dashboard supplies a custom prompt,
- * that prompt is loaded separately as additional
- * screening instructions instead of replacing the
- * application's required base screening rules.
+ * that prompt is loaded separately and the pipeline
+ * uses it to select focused custom-query mode.
  */
 function loadConfig(options = {}) {
 

@@ -34,6 +34,14 @@ const tests = [
 
     {
         name:
+            "Evidence Validation and CSV Formatting",
+
+        file:
+            "testEvidenceValidation.js"
+    },
+
+    {
+        name:
             "Score Calculator",
 
         file:
@@ -86,6 +94,38 @@ const tests = [
 
         file:
             "testPipelineIntegration.js"
+    },
+
+    {
+        name:
+            "X Social Research",
+
+        file:
+            "testXSocialResearcher.js"
+    },
+
+    {
+        name:
+            "Multi-Source Research",
+
+        file:
+            "testMultiSourceResearcher.js"
+    },
+
+    {
+        name:
+            "Multi-Source Pipeline End-to-End",
+
+        file:
+            "testMultiSourcePipelineE2E.js"
+    },
+
+    {
+        name:
+            "Custom Query and Natural-Language Scoring",
+
+        file:
+            "testCustomModes.js"
     }
 ];
 

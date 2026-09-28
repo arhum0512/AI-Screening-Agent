@@ -1,4 +1,5 @@
 require("dotenv").config();
+
 const fs = require("fs");
 const path = require("path");
 
@@ -11,13 +12,20 @@ const {
 } = require("./csvWriter");
 
 const {
+    writeCustomQueryResults
+} = require("./customCsvWriter");
+
+const {
     createResearchPrompt
 } = require("./screening/researcher");
 
 const {
-    configureResearch,
-    researchWebsite
+    configureResearch
 } = require("./research/webResearcher");
+
+const {
+    researchAllSources
+} = require("./research/multiSourceResearcher");
 
 const {
     validateScreeningResult
@@ -43,19 +51,41 @@ const {
     formatScreeningResult
 } = require("./screening/resultFormatter");
 
+const {
+    processCustomQuery
+} = require("./screening/customQueryProcessor");
+
+const {
+    evaluateCustomScoring
+} = require("./screening/customScoringEvaluator");
+
 
 async function runScreening(options = {}) {
 
     const companiesPath =
         options.companiesPath;
 
+    const dependencies =
+        options.dependencies ||
+        {};
+
+
     const promptPath =
         options.promptPath ||
         null;
 
+
     const triggersPath =
         options.triggersPath ||
         null;
+
+
+    const scoringInstructions =
+        String(
+            options.scoringInstructions ||
+            ""
+        ).trim();
+
 
     const outputDirectory =
         options.outputDirectory ||
@@ -104,6 +134,12 @@ async function runScreening(options = {}) {
     );
 
 
+    const mode =
+        config.customPrompt
+            ? "custom_query"
+            : "standard";
+
+
     // --------------------------------------------------
     // Prepare output paths
     // --------------------------------------------------
@@ -129,17 +165,20 @@ async function runScreening(options = {}) {
             "screened-companies.csv"
         );
 
+
     const triggerOutputPath =
         path.join(
             outputDirectory,
             "detected-triggers.csv"
         );
 
+
     const evidenceOutputPath =
         path.join(
             outputDirectory,
             "evidence.csv"
         );
+
 
     const failedOutputPath =
         path.join(
@@ -148,11 +187,19 @@ async function runScreening(options = {}) {
         );
 
 
+    const customOutputPath =
+        path.join(
+            outputDirectory,
+            "custom-query-results.csv"
+        );
+
+
     const outputFiles = [
         summaryOutputPath,
         triggerOutputPath,
         evidenceOutputPath,
-        failedOutputPath
+        failedOutputPath,
+        customOutputPath
     ];
 
 
@@ -192,6 +239,9 @@ async function runScreening(options = {}) {
     ) {
 
         return {
+
+            mode,
+
             success:
                 false,
 
@@ -247,42 +297,137 @@ async function runScreening(options = {}) {
 
         try {
 
-            // Research website
-            const research =
-                await researchWebsite(
-                    company.website
+            console.log(
+                "\n========================================"
+            );
+
+            console.log(
+                `Processing company ${i + 1}/${companies.length}`
+            );
+
+            console.log(
+                `Website: ${company.website}`
+            );
+
+            console.log(
+                "========================================\n"
+            );
+
+
+            // --------------------------------------------------
+            // Research official website, public web, and X
+            // --------------------------------------------------
+
+            console.log(
+                `Researching official website, public web, and X: ${company.website}`
+            );
+
+
+            const combinedResearch =
+                await researchAllSources(
+                    company,
+                    dependencies
                 );
 
 
-            // Build AI prompt
-           const researchPrompt =
-    createResearchPrompt(
-        company,
-        config.screeningPrompt,
-        config.triggers,
-        research.text,
-        config.customPrompt
-    );
+            console.log(
+                `Multi-source research completed. Sources found: ${combinedResearch.sources.length}`
+            );
 
 
+            const allowedSourceUrls =
+                combinedResearch.sources.map(
+                    (source) =>
+                        source.url
+                );
+
+
+            // --------------------------------------------------
+            // Focused custom-query mode
+            // --------------------------------------------------
+
+            if (mode === "custom_query") {
+
+                const customResult =
+                    await processCustomQuery({
+                        company,
+                        query:
+                            config.customPrompt,
+                        researchText:
+                            combinedResearch.text,
+                        scoringInstructions,
+                        allowedSourceUrls,
+                        askAI:
+                            dependencies.askAI,
+                        parseAIResponse:
+                            dependencies.parseAIResponse
+                    });
+
+                screeningResults.push(
+                    customResult
+                );
+
+                console.log(
+                    `Custom query completed successfully: ${company.website}`
+                );
+
+                continue;
+            }
+
+
+            // --------------------------------------------------
+            // Build final AI screening prompt
+            // --------------------------------------------------
+
+            const researchPrompt =
+                createResearchPrompt(
+                    company,
+                    config.screeningPrompt,
+                    config.triggers,
+                    combinedResearch.text,
+                    config.customPrompt
+                );
+
+
+            console.log(
+                "Final screening prompt created."
+            );
+
+
+            // --------------------------------------------------
             // AI request
+            // --------------------------------------------------
+
             const aiResponse =
-                await askAI(
+                await (
+                    dependencies.askAI ||
+                    askAI
+                )(
                     researchPrompt
                 );
 
 
+            // --------------------------------------------------
             // Parse AI result
+            // --------------------------------------------------
+
             const aiResult =
                 parseAIResponse(
                     aiResponse
                 );
 
 
+            // --------------------------------------------------
             // Validate AI result
+            // --------------------------------------------------
+
             const validation =
                 validateScreeningResult(
-                    aiResult
+                    aiResult,
+                    {
+                        allowedSourceUrls:
+                            allowedSourceUrls
+                    }
                 );
 
 
@@ -291,6 +436,7 @@ async function runScreening(options = {}) {
             ) {
 
                 failedCompanies.push({
+
                     website:
                         company.website,
 
@@ -298,11 +444,15 @@ async function runScreening(options = {}) {
                         `AI screening result validation failed: ${validation.errors.join("; ")}`
                 });
 
+
                 continue;
             }
 
 
+            // --------------------------------------------------
             // Detect configured triggers
+            // --------------------------------------------------
+
             const detectedTriggers =
                 detectTriggers(
                     aiResult,
@@ -310,7 +460,10 @@ async function runScreening(options = {}) {
                 );
 
 
+            // --------------------------------------------------
             // Detect additional triggers
+            // --------------------------------------------------
+
             const additionalTriggers =
                 detectAdditionalTriggers(
                     aiResult,
@@ -318,15 +471,45 @@ async function runScreening(options = {}) {
                 );
 
 
+            // --------------------------------------------------
             // Calculate backend score
-            const companyScore =
+            // --------------------------------------------------
+
+            let companyScore =
                 calculateCompanyScore(
                     detectedTriggers,
                     additionalTriggers
                 );
 
 
+            let customScore =
+                null;
+
+
+            if (scoringInstructions) {
+
+                customScore =
+                    await evaluateCustomScoring({
+                        company,
+                        researchText:
+                            combinedResearch.text,
+                        scoringInstructions,
+                        allowedSourceUrls,
+                        askAI:
+                            dependencies.askAI,
+                        parseAIResponse:
+                            dependencies.parseAIResponse
+                    });
+
+                companyScore =
+                    customScore.value;
+            }
+
+
+            // --------------------------------------------------
             // Format final result
+            // --------------------------------------------------
+
             const formattedResult =
                 formatScreeningResult(
                     company,
@@ -337,8 +520,28 @@ async function runScreening(options = {}) {
                 );
 
 
+            if (customScore) {
+
+                formattedResult.scoring_mode =
+                    "manual";
+
+                formattedResult.scoring_reason =
+                    customScore.reason;
+
+                formattedResult.scoring_evidence =
+                    JSON.stringify(
+                        customScore.evidence
+                    );
+            }
+
+
             screeningResults.push(
                 formattedResult
+            );
+
+
+            console.log(
+                `Company screening completed successfully: ${company.website}`
             );
 
 
@@ -348,6 +551,7 @@ async function runScreening(options = {}) {
                 getErrorStatus(
                     companyError
                 );
+
 
             const failureReason =
                 companyError?.message ||
@@ -364,7 +568,9 @@ async function runScreening(options = {}) {
                 dailyQuotaExhausted =
                     true;
 
+
                 failedCompanies.push({
+
                     website:
                         company.website,
 
@@ -372,17 +578,28 @@ async function runScreening(options = {}) {
                         "AI daily quota has been exhausted."
                 });
 
+
                 break;
             }
 
 
             failedCompanies.push({
+
                 website:
                     company.website,
 
                 reason:
                     failureReason
             });
+
+
+            console.error(
+                `Company screening failed: ${company.website}`
+            );
+
+            console.error(
+                failureReason
+            );
         }
     }
 
@@ -392,6 +609,7 @@ async function runScreening(options = {}) {
     // --------------------------------------------------
 
     let failedWriteResult = {
+
         written:
             0,
 
@@ -417,6 +635,7 @@ async function runScreening(options = {}) {
     // --------------------------------------------------
 
     let writeResult = {
+
         written:
             0,
 
@@ -438,11 +657,41 @@ async function runScreening(options = {}) {
         screeningResults.length > 0
     ) {
 
-        writeResult =
-            await writeCompanies(
-                summaryOutputPath,
-                screeningResults
-            );
+        if (mode === "custom_query") {
+
+            const customWriteResult =
+                await writeCustomQueryResults(
+                    customOutputPath,
+                    screeningResults
+                );
+
+            writeResult = {
+                written:
+                    customWriteResult.written,
+                filePath:
+                    customWriteResult.filePath,
+                filePaths: {
+                    summary:
+                        customWriteResult.filePath,
+                    triggers:
+                        null,
+                    evidence:
+                        null
+                },
+                triggerRowsWritten:
+                    0,
+                evidenceRowsWritten:
+                    customWriteResult.rowsWritten
+            };
+
+        } else {
+
+            writeResult =
+                await writeCompanies(
+                    summaryOutputPath,
+                    screeningResults
+                );
+        }
     }
 
 
@@ -451,6 +700,8 @@ async function runScreening(options = {}) {
     // --------------------------------------------------
 
     return {
+
+        mode,
 
         success:
             screeningResults.length > 0,
@@ -472,7 +723,13 @@ async function runScreening(options = {}) {
         dailyQuotaExhausted,
 
         configSources:
-            config.sources,
+            {
+                ...config.sources,
+                manualScoring:
+                    Boolean(
+                        scoringInstructions
+                    )
+            },
 
         results:
             screeningResults,
@@ -493,6 +750,11 @@ async function runScreening(options = {}) {
             evidence:
                 writeResult.filePaths?.evidence ||
                 null,
+
+            custom:
+                mode === "custom_query"
+                    ? writeResult.filePaths?.summary || null
+                    : null,
 
             failed:
                 failedWriteResult.filePath ||

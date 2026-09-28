@@ -233,7 +233,7 @@ function normalizeEvidence(evidence) {
         )
         .filter(
             (item) =>
-                item.source ||
+                item.source &&
                 item.description
         );
 }

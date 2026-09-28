@@ -2,7 +2,7 @@ AI Website Screening Agent — V1
 
 Overview
 
-The AI Website Screening Agent is a Node.js application that reads company websites from a CSV file, researches each company’s public website, analyzes the collected information using an AI provider, detects relevant business triggers, calculates a final company score, and exports the results to a human-readable CSV file.
+The AI Website Screening Agent is a Node.js application that reads company websites from a CSV file, combines official-site, public-web, and X/social research, analyzes the collected information using an AI provider, detects relevant business triggers, calculates a final company score, and exports the results to human-readable CSV files.
 
 V1 keeps business rules configurable. Trigger definitions, trigger scores, screening instructions, research settings, and output structure are stored separately from the main application logic.
 
@@ -16,9 +16,17 @@ Configurable website research
 
 Homepage and internal-page research
 
+Public web search research with preserved citation URLs
+
+X/social activity research through x_search
+
 Configurable predefined triggers and scores
 
 Additional AI-discovered triggers
+
+Focused custom-query mode for user questions
+
+Natural-language manual scoring rules
 
 Evidence-based screening
 
@@ -171,13 +179,13 @@ id,website
 
 The CSV reader validates rows before website research. Missing websites and unsupported protocols such as ftp:// are rejected. Domains without a protocol can be normalized to HTTPS.
 
-Website Research
+Multi-Source Research
 
 Website research is handled by:
 
 src/research/webResearcher.js
 
-The researcher fetches the homepage, discovers internal links, selects useful pages using configured priorities, researches those pages, and combines the collected text with source URLs.
+The official-site researcher fetches the homepage, discovers internal links, selects useful pages using configured priorities, and retains their source URLs. `src/research/publicWebResearcher.js` adds public web search, `src/research/xSocialResearcher.js` adds X activity through `x_search`, and `src/research/multiSourceResearcher.js` combines all three layers into one evidence-aware research prompt.
 
 Research behavior is configured in:
 
@@ -232,7 +240,13 @@ AI responses are validated by:
 
 src/validation/outputValidator.js
 
-Validation includes required fields, data types, trigger categories, trigger scores, evidence, confidence, duplicate triggers, and forbidden AI-generated final score fields.
+Validation includes required fields, data types, trigger categories, trigger scores, evidence, confidence, duplicate triggers, forbidden AI-generated final score fields, absolute HTTP(S) evidence URLs, and evidence-source provenance against the supplied research URLs.
+
+Operating Modes
+
+With the default prompt, the existing full screening schema, trigger detection, backend scoring, and standard CSV files are preserved. A written or uploaded prompt selects custom-query mode, which returns only focused answers, relevant evidence, and an optional validated custom score. Manual scoring is plain English and is evaluated against the same multi-source research; the accepted numeric result must remain between 0 and 10.
+
+Custom-query runs write `custom-query-results.csv`. Standard runs continue to write `screened-companies.csv`, `detected-triggers.csv`, `evidence.csv`, and `failed-companies.csv`.
 
 Scoring
 
@@ -417,7 +431,7 @@ Processing is sequential.
 
 Future Improvements
 
-Possible V2 improvements include external web search, browser-based research, LinkedIn research, job-board research, funding/news research, a human-review dashboard, editable trigger management, database storage, historical comparisons, caching, scheduled screening, logging, monitoring, CI/CD, deployment, queues, and controlled parallel processing.
+Possible V2 improvements include browser-based research, deeper LinkedIn and job-board research, editable trigger management, database storage, historical comparisons, caching, scheduled screening, logging, monitoring, CI/CD, deployment, queues, and controlled parallel processing.
 
 Current Status
 

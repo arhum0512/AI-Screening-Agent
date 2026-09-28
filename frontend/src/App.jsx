@@ -16,6 +16,10 @@ import {
   Globe2,
   Download
 } from "lucide-react";
+
+import {
+  CustomQueryResults
+} from "./CustomQueryResults";
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "";
 function App() {
@@ -197,30 +201,10 @@ function App() {
       setMessageType("error");
 
       setMessage(
-        "Please enter scoring JSON or select Default."
+        "Please write scoring instructions or select Default."
       );
 
       return;
-    }
-
-
-    if (
-      scoringMode === "manual"
-    ) {
-      try {
-        JSON.parse(
-          scoringText
-        );
-
-      } catch {
-        setMessageType("error");
-
-        setMessage(
-          "The manually entered scoring configuration is not valid JSON."
-        );
-
-        return;
-      }
     }
 
 
@@ -1032,7 +1016,7 @@ function App() {
               <div className="mt-6">
 
                 <label className="mb-3 block text-sm font-semibold text-slate-300">
-                  Write or paste scoring JSON
+                  Write scoring instructions
                 </label>
 
 
@@ -1049,13 +1033,12 @@ function App() {
 
                   }}
                   rows={10}
-                  spellCheck={false}
-                  placeholder={`{
-  "growth_triggers": [],
-  "pain_point_triggers": [],
-  "workflow_tool_triggers": []
-}`}
-                  className="w-full resize-y rounded-2xl border border-cyan-400/20 bg-white/90 px-5 py-4 font-mono text-sm leading-7 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-cyan-400/50 focus:ring-2 focus:ring-cyan-500/10"
+                  placeholder={`Example:
+
+If the company provides Android application development services, score 10.
+
+If there is no evidence of Android application development, score 0.`}
+                  className="w-full resize-y rounded-2xl border border-cyan-400/20 bg-white/90 px-5 py-4 text-sm leading-7 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-cyan-400/50 focus:ring-2 focus:ring-cyan-500/10"
                 />
 
               </div>
@@ -1249,11 +1232,15 @@ function App() {
               <div>
 
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
-                  Screening Result
+                  {screeningResult.mode === "custom_query"
+                    ? "Custom Query Result"
+                    : "Screening Result"}
                 </p>
 
                 <h3 className="mt-2 text-xl font-bold text-slate-950">
-                  Screening Summary
+                  {screeningResult.mode === "custom_query"
+                    ? "Focused Research Answers"
+                    : "Screening Summary"}
                 </h3>
 
               </div>
@@ -1276,7 +1263,18 @@ function App() {
             </div>
 
 
+            {screeningResult.mode === "custom_query" && (
+
+              <CustomQueryResults
+                results={screeningResult.results}
+              />
+
+            )}
+
+
             {/* Summary Cards */}
+            {screeningResult.mode !== "custom_query" && (
+
             <div className="mt-6 grid gap-4 md:grid-cols-3">
 
               <div className="rounded-2xl border border-slate-200/80 bg-white/85 p-5">
@@ -1319,6 +1317,8 @@ function App() {
 
             </div>
 
+            )}
+
 
             {/* Downloads */}
             <div className="mt-8 border-t border-slate-200/80 pt-7">
@@ -1342,7 +1342,7 @@ function App() {
 
               <div className="mt-5 grid gap-4 sm:grid-cols-2">
 
-                {screeningResult.files?.summary && (
+                {screeningResult.mode !== "custom_query" && screeningResult.files?.summary && (
 
                   <a
                    href={`${API_BASE_URL}/api/download/summary`}
@@ -1372,6 +1372,40 @@ function App() {
 
                     </div>
 
+
+                    <ChevronRight
+                      size={18}
+                      className="text-slate-9500 transition group-hover:translate-x-1 group-hover:text-blue-700"
+                    />
+
+                  </a>
+
+                )}
+
+
+                {screeningResult.mode === "custom_query" && screeningResult.files?.custom && (
+
+                  <a
+                    href={`${API_BASE_URL}/api/download/custom`}
+                    className="group flex items-center justify-between rounded-2xl border border-blue-200 bg-blue-50/80 p-5 transition hover:border-blue-300 hover:bg-blue-100/80"
+                  >
+
+                    <div className="flex items-center gap-4">
+
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 text-blue-700">
+                        <Download size={20} />
+                      </div>
+
+                      <div>
+                        <p className="font-semibold text-slate-900">
+                          Custom Query Results
+                        </p>
+                        <p className="mt-1 text-xs text-slate-9500">
+                          custom-query-results.csv
+                        </p>
+                      </div>
+
+                    </div>
 
                     <ChevronRight
                       size={18}

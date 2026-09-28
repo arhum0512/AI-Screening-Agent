@@ -315,69 +315,6 @@ function createManualPromptFile(promptText) {
 
 
 // --------------------------------------------------
-// Helper: create temporary manual scoring file
-// --------------------------------------------------
-
-function createManualScoringFile(scoringText) {
-
-    const cleanedScoring =
-        String(
-            scoringText ||
-            ""
-        ).trim();
-
-
-    if (
-        !cleanedScoring
-    ) {
-
-        throw new Error(
-            "Manual scoring configuration cannot be empty."
-        );
-    }
-
-
-    let parsedScoring;
-
-
-    try {
-
-        parsedScoring =
-            JSON.parse(
-                cleanedScoring
-            );
-
-    } catch (error) {
-
-        throw new Error(
-            "Manual scoring configuration contains invalid JSON."
-        );
-    }
-
-
-    const filePath =
-        path.join(
-            uploadDirectory,
-            `${Date.now()}-manual-scoring.json`
-        );
-
-
-    fs.writeFileSync(
-        filePath,
-        JSON.stringify(
-            parsedScoring,
-            null,
-            2
-        ),
-        "utf8"
-    );
-
-
-    return filePath;
-}
-
-
-// --------------------------------------------------
 // Health route
 // --------------------------------------------------
 
@@ -410,6 +347,9 @@ const downloadableFiles = {
 
     evidence:
         "evidence.csv",
+
+    custom:
+        "custom-query-results.csv",
 
     failed:
         "failed-companies.csv"
@@ -566,10 +506,6 @@ app.post(
         let manualPromptPath =
             null;
 
-        let manualScoringPath =
-            null;
-
-
         try {
 
             // --------------------------------------------------
@@ -655,7 +591,7 @@ app.post(
                             false,
 
                         message:
-                            "Choose either an uploaded scoring file or manually written scoring JSON, not both."
+                            "Choose either an uploaded scoring file or manually written scoring instructions, not both."
                     });
             }
 
@@ -758,16 +694,11 @@ app.post(
                 scoringText
             ) {
 
-                manualScoringPath =
-                    createManualScoringFile(
-                        scoringText
-                    );
-
                 triggersPath =
-                    manualScoringPath;
+                    null;
 
                 scoringDescription =
-                    "Manual scoring configuration";
+                    "Manual scoring instructions";
 
             } else {
 
@@ -821,6 +752,9 @@ app.post(
 
                     triggersPath,
 
+                    scoringInstructions:
+                        scoringText,
+
                     outputDirectory:
                         dashboardOutputDirectory
                 });
@@ -831,6 +765,9 @@ app.post(
             // --------------------------------------------------
 
             return res.json({
+
+                mode:
+                    result.mode,
 
                 success:
                     result.success,
@@ -953,9 +890,6 @@ app.post(
                 manualPromptPath
             );
 
-            deleteFileSafely(
-                manualScoringPath
-            );
         }
     }
 );

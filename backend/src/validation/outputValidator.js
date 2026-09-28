@@ -87,6 +87,66 @@ function isNonEmptyString(value) {
 
 
 // --------------------------------------------------
+// Helper: check absolute HTTP(S) source URL
+// --------------------------------------------------
+
+function isValidSourceUrl(value) {
+
+    if (!isNonEmptyString(value)) {
+        return false;
+    }
+
+    const source =
+        value.trim();
+
+    if (
+        /\s/.test(
+            source
+        )
+    ) {
+
+        return false;
+    }
+
+    try {
+
+        const parsed =
+            new URL(
+                source
+            );
+
+        return (
+            (
+                parsed.protocol === "https:" ||
+                parsed.protocol === "http:"
+            ) &&
+            Boolean(
+                parsed.hostname
+            ) &&
+            !parsed.username &&
+            !parsed.password
+        );
+
+    } catch (error) {
+
+        return false;
+    }
+}
+
+
+function normalizeSourceUrl(value) {
+
+    if (!isValidSourceUrl(value)) {
+        return null;
+    }
+
+    return new URL(
+        value.trim()
+    ).href;
+}
+
+
+// --------------------------------------------------
 // Validate one evidence object
 // --------------------------------------------------
 
@@ -112,14 +172,16 @@ function validateEvidenceItem(
     }
 
 
-    if (
-        !isNonEmptyString(
-            evidence.source
-        )
-    ) {
+    if (!isNonEmptyString(evidence.source)) {
 
         errors.push(
             `${context}: evidence source is required.`
+        );
+
+    } else if (!isValidSourceUrl(evidence.source)) {
+
+        errors.push(
+            `${context}: evidence source must be an absolute HTTP(S) URL without embedded description text.`
         );
     }
 
@@ -485,7 +547,8 @@ function validateDuplicateTriggers(
 // --------------------------------------------------
 
 function validateScreeningResult(
-    result
+    result,
+    options = {}
 ) {
 
     const errors = [];
@@ -735,6 +798,95 @@ function validateScreeningResult(
 
 
     // --------------------------------------------------
+    // Evidence URLs must come from supplied research
+    // --------------------------------------------------
+
+    if (
+        Array.isArray(
+            options.allowedSourceUrls
+        )
+    ) {
+
+        const allowedSourceUrls =
+            new Set(
+                options.allowedSourceUrls
+                    .filter(
+                        isValidSourceUrl
+                    )
+                    .map(
+                        (source) =>
+                            normalizeSourceUrl(
+                                source
+                            )
+                    )
+            );
+
+        const evidenceCollections = [
+            {
+                context:
+                    "top-level",
+                evidence:
+                    result.evidence
+            },
+            ...(
+                Array.isArray(result.detected_triggers)
+                    ? result.detected_triggers
+                    : []
+            ).map(
+                (trigger, index) => ({
+                    context:
+                        `detected_triggers[${index}]`,
+                    evidence:
+                        trigger?.evidence
+                })
+            ),
+            ...(
+                Array.isArray(result.additional_triggers)
+                    ? result.additional_triggers
+                    : []
+            ).map(
+                (trigger, index) => ({
+                    context:
+                        `additional_triggers[${index}]`,
+                    evidence:
+                        trigger?.evidence
+                })
+            )
+        ];
+
+        evidenceCollections.forEach(
+            (collection) => {
+
+                if (!Array.isArray(collection.evidence)) {
+                    return;
+                }
+
+                collection.evidence.forEach(
+                    (item, index) => {
+
+                        if (
+                            isValidSourceUrl(
+                                item?.source
+                            ) &&
+                            !allowedSourceUrls.has(
+                                normalizeSourceUrl(
+                                    item.source
+                                )
+                            )
+                        ) {
+
+                            errors.push(
+                                `${collection.context} evidence[${index}]: source URL was not present in the supplied research.`
+                            );
+                        }
+                    }
+                );
+            }
+        );
+    }
+
+
+    // --------------------------------------------------
     // Overall reason
     // --------------------------------------------------
 
@@ -785,6 +937,8 @@ function validateScreeningResult(
 
 module.exports = {
     validateScreeningResult,
+    isValidSourceUrl,
+    normalizeSourceUrl,
     validateEvidenceItem,
     validateEvidenceArray,
     validateDetectedTrigger,

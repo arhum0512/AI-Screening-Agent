@@ -78,7 +78,7 @@
               "properties": {
                 "source": {
                   "type": "string",
-                  "description": "URL or name of the public source."
+                  "description": "Absolute HTTP(S) URL of the public source."
                 },
                 "description": {
                   "type": "string",
@@ -136,7 +136,8 @@
               ],
               "properties": {
                 "source": {
-                  "type": "string"
+                  "type": "string",
+                  "description": "Absolute HTTP(S) URL of the public source."
                 },
                 "description": {
                   "type": "string"
@@ -159,7 +160,7 @@
         "properties": {
           "source": {
             "type": "string",
-            "description": "URL or name of the source."
+            "description": "Absolute HTTP(S) URL of the source."
           },
           "description": {
             "type": "string",

@@ -418,7 +418,7 @@ function collectEvidence(company) {
             );
 
         if (
-            !source &&
+            !source ||
             !description
         ) {
 
@@ -477,6 +477,15 @@ function collectEvidence(company) {
         );
 
     generalEvidence.forEach(
+        addEvidenceItem
+    );
+
+    const scoringEvidence =
+        parseJsonArray(
+            company?.scoring_evidence
+        );
+
+    scoringEvidence.forEach(
         addEvidenceItem
     );
 
@@ -577,6 +586,20 @@ function createVerticalCompanyRows(company) {
         [
             `Score = ${company?.company_score ?? 0} / 10`
         ],
+
+        ...(
+            normalizeText(
+                company?.scoring_reason
+            )
+                ? [
+                    [
+                        `Scoring Rule Reason = ${normalizeText(
+                            company?.scoring_reason
+                        )}`
+                    ]
+                ]
+                : []
+        ),
 
         [
             `Business Type = ${normalizeText(
@@ -798,7 +821,7 @@ function buildEvidenceRows(companies) {
                     );
 
                 if (
-                    !source &&
+                    !source ||
                     !description
                 ) {
 
@@ -892,6 +915,22 @@ function buildEvidenceRows(companies) {
                     addEvidenceRow(
                         "General Evidence",
                         "General",
+                        item
+                    );
+                }
+            );
+
+            const scoringEvidence =
+                parseJsonArray(
+                    company?.scoring_evidence
+                );
+
+            scoringEvidence.forEach(
+                (item) => {
+
+                    addEvidenceRow(
+                        "Scoring Evidence",
+                        "Manual Scoring",
                         item
                     );
                 }

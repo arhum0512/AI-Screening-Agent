@@ -19,6 +19,8 @@
     "test:csv-reader": "node tests/testCsvReader.js",
     "test:csv-writer": "node tests/testCsvWriter.js",
     "test:pipeline": "node tests/testPipelineIntegration.js",
+    "test:custom": "node tests/testCustomModes.js",
+    "test:custom-live": "node tests/testLiveCustomQuery.js",
     "test:web-research": "node tests/testWebResearcher.js",
     "test:grok-live": "node tests/testLiveGrokConnection.js"
   },

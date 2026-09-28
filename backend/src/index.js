@@ -16,9 +16,12 @@ const {
 } = require("./screening/researcher");
 
 const {
-    configureResearch,
-    researchWebsite
+    configureResearch
 } = require("./research/webResearcher");
+
+const {
+    researchAllSources
+} = require("./research/multiSourceResearcher");
 
 const {
     validateScreeningResult
@@ -231,20 +234,20 @@ async function main() {
             try {
 
                 // --------------------------------------------------
-                // 6.1 Fetch website research
+                // 6.1 Fetch multi-source research
                 // --------------------------------------------------
 
                 console.log(
-                    "\nFetching company website..."
+                    "\nResearching official website, public web, and X..."
                 );
 
                 const research =
-                    await researchWebsite(
-                        company.website
+                    await researchAllSources(
+                        company
                     );
 
                 console.log(
-                    "Website research completed successfully."
+                    `Multi-source research completed successfully (${research.sources.length} source URLs).`
                 );
 
 
@@ -257,7 +260,8 @@ async function main() {
                         company,
                         config.screeningPrompt,
                         config.triggers,
-                        research.text
+                        research.text,
+                        config.customPrompt
                     );
 
                 console.log(
@@ -315,7 +319,14 @@ async function main() {
 
                 const validation =
                     validateScreeningResult(
-                        aiResult
+                        aiResult,
+                        {
+                            allowedSourceUrls:
+                                research.sources.map(
+                                    (source) =>
+                                        source.url
+                                )
+                        }
                     );
 
                 if (
