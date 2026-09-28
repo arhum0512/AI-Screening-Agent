@@ -348,8 +348,11 @@ const downloadableFiles = {
     evidence:
         "evidence.csv",
 
-    custom:
-        "custom-query-results.csv",
+    "custom-results":
+        "custom-results.csv",
+
+    "custom-evidence":
+        "custom-evidence.csv",
 
     failed:
         "failed-companies.csv"
@@ -828,13 +831,49 @@ app.post(
                     result.configSources,
 
                 results:
-                    result.results,
+                    result.mode === "custom_query"
+                        ? []
+                        : result.results,
+
+                customSummary:
+                    result.customSummary
+                        ? {
+                            companiesProcessed:
+                                result.customSummary.companiesProcessed,
+                            questionsAnswered:
+                                result.customSummary.questionsAnswered,
+                            score:
+                                result.customSummary.score
+                                    ? {
+                                        value:
+                                            result.customSummary.score.value,
+                                        max:
+                                            result.customSummary.score.max
+                                    }
+                                    : null
+                        }
+                        : null,
 
                 failures:
                     result.failures,
 
                 files:
-                    result.files
+                    result.mode === "custom_query"
+                        ? {
+                            customResults:
+                                Boolean(
+                                    result.files.customResults
+                                ),
+                            customEvidence:
+                                Boolean(
+                                    result.files.customEvidence
+                                ),
+                            failed:
+                                Boolean(
+                                    result.files.failed
+                                )
+                        }
+                        : result.files
             });
 
 

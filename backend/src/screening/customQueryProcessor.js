@@ -54,6 +54,8 @@ RULES
 - Keep source and description in separate fields.
 - Use one answers item per requested question or distinct requested output.
 - Keep answers concise and human-readable.
+- For list questions, return a concise semicolon-separated list instead of a paragraph.
+- For yes/no questions, begin with exactly Yes or No and keep supporting explanation in evidence.
 - Return only valid JSON without Markdown or code fences.
 
 RETURN EXACTLY THIS SHAPE

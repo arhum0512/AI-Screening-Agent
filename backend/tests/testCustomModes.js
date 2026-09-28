@@ -1,6 +1,7 @@
 const assert = require("assert");
 const fs = require("fs");
 const path = require("path");
+const csvParser = require("csv-parser");
 
 const {
     runScreening
@@ -11,6 +12,11 @@ const {
     validateCustomScore
 } = require("../src/validation/customResultValidator");
 
+const {
+    formatAnswerForCsv,
+    sanitizeSpreadsheetText
+} = require("../src/customCsvWriter");
+
 
 const sourceUrls = {
     official:
@@ -20,6 +26,22 @@ const sourceUrls = {
     social:
         "https://x.com/example/status/123"
 };
+
+
+function readCsv(filePath) {
+
+    return new Promise(
+        (resolve, reject) => {
+            const rows = [];
+
+            fs.createReadStream(filePath)
+                .pipe(csvParser())
+                .on("data", (row) => rows.push(row))
+                .on("end", () => resolve(rows))
+                .on("error", reject);
+        }
+    );
+}
 
 
 function createResearchDependencies(askAI) {
@@ -289,26 +311,72 @@ async function main() {
             )
         );
 
+        assert.ok(fs.existsSync(customResult.files.customResults));
+        assert.ok(fs.existsSync(customResult.files.customEvidence));
+
+        const customResultRows =
+            await readCsv(customResult.files.customResults);
+
+        const customEvidenceRows =
+            await readCsv(customResult.files.customEvidence);
+
+        assert.strictEqual(customResultRows.length, 2);
+        assert.strictEqual(customEvidenceRows.length, 3);
+        assert.deepStrictEqual(
+            Object.keys(customResultRows[0]),
+            [
+                "company",
+                "website",
+                "question",
+                "answer",
+                "score",
+                "score_max",
+                "score_reason"
+            ]
+        );
+        assert.deepStrictEqual(
+            Object.keys(customEvidenceRows[0]),
+            [
+                "company",
+                "website",
+                "question",
+                "source_url",
+                "evidence_description"
+            ]
+        );
+        assert.strictEqual(customResultRows[0].score, "10");
+        assert.strictEqual(customResultRows[0].score_max, "10");
+        assert.ok(!customResultRows[0].score.includes("/"));
+        assert.strictEqual(customEvidenceRows[0].source_url, sourceUrls.official);
         assert.ok(
-            fs.existsSync(
-                customResult.files.custom
+            customEvidenceRows.every(
+                (row) => row.source_url && row.evidence_description
             )
         );
-
-        const customCsv =
-            fs.readFileSync(
-                customResult.files.custom,
-                "utf8"
-            );
-
-        assert.ok(
-            customCsv.includes(
-                sourceUrls.official
-            ) &&
-            customCsv.includes(
-                "10/10"
-            )
+        assert.strictEqual(
+            new Set(
+                customEvidenceRows.map(
+                    (row) => `${row.source_url}\u0000${row.evidence_description}`
+                )
+            ).size,
+            customEvidenceRows.length
         );
+        assert.strictEqual(
+            formatAnswerForCsv("- Web development\n- Mobile development"),
+            "Web development; Mobile development"
+        );
+        assert.strictEqual(
+            sanitizeSpreadsheetText("=SUM(A1:A2)"),
+            "'=SUM(A1:A2)"
+        );
+        assert.strictEqual(
+            sanitizeSpreadsheetText(" ordinary text"),
+            " ordinary text"
+        );
+        assert.strictEqual(customResult.customSummary.companiesProcessed, 1);
+        assert.strictEqual(customResult.customSummary.questionsAnswered, 2);
+        assert.strictEqual(customResult.customSummary.score.value, 10);
+        assert.strictEqual(customResult.customSummary.score.max, 10);
 
         const servicesOnlyResult =
             await runScreening({
@@ -359,6 +427,13 @@ async function main() {
             servicesOnlyResult.results[0].score,
             null
         );
+
+        const servicesOnlyRows =
+            await readCsv(servicesOnlyResult.files.customResults);
+
+        assert.strictEqual(servicesOnlyRows[0].score, "");
+        assert.strictEqual(servicesOnlyRows[0].score_max, "");
+        assert.strictEqual(servicesOnlyRows[0].score_reason, "");
 
         assert.strictEqual(
             Object.keys(

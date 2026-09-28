@@ -246,7 +246,7 @@ Operating Modes
 
 With the default prompt, the existing full screening schema, trigger detection, backend scoring, and standard CSV files are preserved. A written or uploaded prompt selects custom-query mode, which returns only focused answers, relevant evidence, and an optional validated custom score. Manual scoring is plain English and is evaluated against the same multi-source research; the accepted numeric result must remain between 0 and 10.
 
-Custom-query runs write `custom-query-results.csv`. Standard runs continue to write `screened-companies.csv`, `detected-triggers.csv`, `evidence.csv`, and `failed-companies.csv`.
+Custom-query runs are download-first and write two separate files: `custom-results.csv` contains one row per company and question, while `custom-evidence.csv` contains deduplicated evidence with its source URL and description in separate columns. The dashboard only shows a compact completion summary for this mode. Standard runs continue to write `screened-companies.csv`, `detected-triggers.csv`, `evidence.csv`, and `failed-companies.csv`.
 
 Scoring
 

@@ -1,106 +1,54 @@
-import assert from "node:assert";
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import React from "react";
-import {
-  renderToStaticMarkup
-} from "react-dom/server";
+import { renderToStaticMarkup } from "react-dom/server";
 
-import {
-  CustomQueryResults
-} from "../src/CustomQueryResults.js";
+import { CustomQuerySummary } from "../src/CustomQuerySummary.js";
 
-
-const markup =
-  renderToStaticMarkup(
-    React.createElement(
-      CustomQueryResults,
-      {
-        results: [
-          {
-            company:
-              "Example Company",
-            website:
-              "https://example.com",
-            answers: [
-              {
-                question:
-                  "What services do they provide?",
-                answer:
-                  "Web Development, Mobile Development, UI/UX Design",
-                evidence: [
-                  {
-                    source:
-                      "https://example.com/services",
-                    description:
-                      "The services page lists these offerings."
-                  }
-                ]
-              },
-              {
-                question:
-                  "Android Application Development",
-                answer:
-                  "Yes",
-                evidence: [
-                  {
-                    source:
-                      "https://example.com/mobile",
-                    description:
-                      "The mobile page lists Android development."
-                  }
-                ]
-              }
-            ],
-            score: {
-              value:
-                10,
-              max:
-                10,
-              reason:
-                "Android development is supported by evidence."
-            }
-          }
-        ]
-      }
-    )
-  );
-
-
-assert.ok(
-  markup.includes(
-    "What services do they provide?"
-  )
+const markup = renderToStaticMarkup(
+  React.createElement(CustomQuerySummary, {
+    summary: {
+      companiesProcessed: 1,
+      questionsAnswered: 2,
+      score: { value: 10, max: 10 },
+    },
+  })
 );
 
-assert.ok(
-  markup.includes(
-    "Android Application Development"
-  )
+const noScoreMarkup = renderToStaticMarkup(
+  React.createElement(CustomQuerySummary, {
+    summary: {
+      companiesProcessed: 1,
+      questionsAnswered: 2,
+      score: null,
+    },
+  })
 );
 
-assert.ok(
-  markup.includes(
-    "https://example.com/mobile"
-  )
+assert.match(markup, /Custom screening completed successfully/);
+assert.match(markup, /Companies processed/);
+assert.match(markup, /Questions answered/);
+assert.match(markup, /10 \/ 10/);
+assert.doesNotMatch(markup, /Does the company provide services/);
+assert.doesNotMatch(markup, /evidence_description/);
+assert.doesNotMatch(markup, /https:\/\//);
+assert.doesNotMatch(noScoreMarkup, />Score</);
+
+const testDirectory = path.dirname(fileURLToPath(import.meta.url));
+const appSource = fs.readFileSync(path.join(testDirectory, "../src/App.jsx"), "utf8");
+
+assert.match(appSource, /Download Results/);
+assert.match(appSource, /Download Evidence/);
+assert.match(appSource, /\/api\/download\/custom-results/);
+assert.match(appSource, /\/api\/download\/custom-evidence/);
+assert.match(appSource, /screened-companies\.csv/);
+assert.match(appSource, /failed-companies\.csv/);
+assert.match(appSource, /screeningResult\.files\?\.failed/);
+assert.match(
+  appSource,
+  /screeningResult\.mode === "custom_query" && screeningResult\.success/
 );
 
-assert.ok(
-  markup.includes(
-    "10/10"
-  )
-);
-
-assert.ok(
-  !markup.includes(
-    "Team Size"
-  )
-);
-
-assert.ok(
-  !markup.includes(
-    "Growth Signals"
-  )
-);
-
-console.log(
-  "PASS: Custom query results render focused answers, evidence, and score without unrelated screening fields."
-);
+console.log("Custom query summary tests passed.");

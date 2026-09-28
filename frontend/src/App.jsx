@@ -18,8 +18,8 @@ import {
 } from "lucide-react";
 
 import {
-  CustomQueryResults
-} from "./CustomQueryResults";
+  CustomQuerySummary
+} from "./CustomQuerySummary";
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "";
 function App() {
@@ -1263,10 +1263,10 @@ If there is no evidence of Android application development, score 0.`}
             </div>
 
 
-            {screeningResult.mode === "custom_query" && (
+            {screeningResult.mode === "custom_query" && screeningResult.success && (
 
-              <CustomQueryResults
-                results={screeningResult.results}
+              <CustomQuerySummary
+                summary={screeningResult.customSummary}
               />
 
             )}
@@ -1330,7 +1330,9 @@ If there is no evidence of Android application development, score 0.`}
                 </p>
 
                 <h4 className="mt-2 text-lg font-bold text-slate-900">
-                  Download screening results
+                  {screeningResult.mode === "custom_query"
+                    ? "Download custom results"
+                    : "Download screening results"}
                 </h4>
 
                 <p className="mt-2 text-sm text-slate-9500">
@@ -1383,10 +1385,10 @@ If there is no evidence of Android application development, score 0.`}
                 )}
 
 
-                {screeningResult.mode === "custom_query" && screeningResult.files?.custom && (
+                {screeningResult.mode === "custom_query" && screeningResult.files?.customResults && (
 
                   <a
-                    href={`${API_BASE_URL}/api/download/custom`}
+                    href={`${API_BASE_URL}/api/download/custom-results`}
                     className="group flex items-center justify-between rounded-2xl border border-blue-200 bg-blue-50/80 p-5 transition hover:border-blue-300 hover:bg-blue-100/80"
                   >
 
@@ -1398,10 +1400,10 @@ If there is no evidence of Android application development, score 0.`}
 
                       <div>
                         <p className="font-semibold text-slate-900">
-                          Custom Query Results
+                          Download Results
                         </p>
                         <p className="mt-1 text-xs text-slate-9500">
-                          custom-query-results.csv
+                          custom-results.csv
                         </p>
                       </div>
 
@@ -1410,6 +1412,40 @@ If there is no evidence of Android application development, score 0.`}
                     <ChevronRight
                       size={18}
                       className="text-slate-9500 transition group-hover:translate-x-1 group-hover:text-blue-700"
+                    />
+
+                  </a>
+
+                )}
+
+
+                {screeningResult.mode === "custom_query" && screeningResult.files?.customEvidence && (
+
+                  <a
+                    href={`${API_BASE_URL}/api/download/custom-evidence`}
+                    className="group flex items-center justify-between rounded-2xl border border-cyan-200 bg-cyan-50/80 p-5 transition hover:border-cyan-300 hover:bg-cyan-100/80"
+                  >
+
+                    <div className="flex items-center gap-4">
+
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-700">
+                        <Download size={20} />
+                      </div>
+
+                      <div>
+                        <p className="font-semibold text-slate-900">
+                          Download Evidence
+                        </p>
+                        <p className="mt-1 text-xs text-slate-9500">
+                          custom-evidence.csv
+                        </p>
+                      </div>
+
+                    </div>
+
+                    <ChevronRight
+                      size={18}
+                      className="text-slate-9500 transition group-hover:translate-x-1 group-hover:text-cyan-700"
                     />
 
                   </a>

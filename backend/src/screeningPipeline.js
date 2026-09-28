@@ -187,7 +187,21 @@ async function runScreening(options = {}) {
         );
 
 
-    const customOutputPath =
+    const customResultsOutputPath =
+        path.join(
+            outputDirectory,
+            "custom-results.csv"
+        );
+
+
+    const customEvidenceOutputPath =
+        path.join(
+            outputDirectory,
+            "custom-evidence.csv"
+        );
+
+
+    const legacyCustomOutputPath =
         path.join(
             outputDirectory,
             "custom-query-results.csv"
@@ -199,7 +213,9 @@ async function runScreening(options = {}) {
         triggerOutputPath,
         evidenceOutputPath,
         failedOutputPath,
-        customOutputPath
+        customResultsOutputPath,
+        customEvidenceOutputPath,
+        legacyCustomOutputPath
     ];
 
 
@@ -661,7 +677,8 @@ async function runScreening(options = {}) {
 
             const customWriteResult =
                 await writeCustomQueryResults(
-                    customOutputPath,
+                    customResultsOutputPath,
+                    customEvidenceOutputPath,
                     screeningResults
                 );
 
@@ -669,19 +686,19 @@ async function runScreening(options = {}) {
                 written:
                     customWriteResult.written,
                 filePath:
-                    customWriteResult.filePath,
+                    customWriteResult.resultsPath,
                 filePaths: {
                     summary:
-                        customWriteResult.filePath,
+                        customWriteResult.resultsPath,
                     triggers:
                         null,
                     evidence:
-                        null
+                        customWriteResult.evidencePath
                 },
                 triggerRowsWritten:
                     0,
                 evidenceRowsWritten:
-                    customWriteResult.rowsWritten
+                    customWriteResult.evidenceRowsWritten
             };
 
         } else {
@@ -734,6 +751,27 @@ async function runScreening(options = {}) {
         results:
             screeningResults,
 
+        customSummary:
+            mode === "custom_query"
+                ? {
+                    companiesProcessed:
+                        screeningResults.length,
+                    questionsAnswered:
+                        screeningResults.reduce(
+                            (
+                                total,
+                                result
+                            ) =>
+                                total + result.answers.length,
+                            0
+                        ),
+                    score:
+                        screeningResults.length === 1
+                            ? screeningResults[0].score
+                            : null
+                }
+                : null,
+
         failures:
             failedCompanies,
 
@@ -751,9 +789,14 @@ async function runScreening(options = {}) {
                 writeResult.filePaths?.evidence ||
                 null,
 
-            custom:
+            customResults:
                 mode === "custom_query"
                     ? writeResult.filePaths?.summary || null
+                    : null,
+
+            customEvidence:
+                mode === "custom_query"
+                    ? writeResult.filePaths?.evidence || null
                     : null,
 
             failed:

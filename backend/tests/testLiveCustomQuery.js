@@ -12,6 +12,24 @@ const {
     isValidSourceUrl
 } = require("../src/validation/outputValidator");
 
+const csvParser = require("csv-parser");
+
+
+function readCsv(filePath) {
+
+    return new Promise(
+        (resolve, reject) => {
+            const rows = [];
+
+            fs.createReadStream(filePath)
+                .pipe(csvParser())
+                .on("data", (row) => rows.push(row))
+                .on("end", () => resolve(rows))
+                .on("error", reject);
+        }
+    );
+}
+
 
 async function main() {
 
@@ -49,7 +67,7 @@ async function main() {
 
     fs.writeFileSync(
         companiesPath,
-        "website\nhttps://www.hubspot.com\n",
+        "website\nhttps://aipearlz.com\n",
         "utf8"
     );
 
@@ -61,8 +79,28 @@ async function main() {
 
     try {
 
-        const result =
-            await runScreening({
+        let useOfficialFixture =
+            process.env.AIPEARLZ_OFFICIAL_FIXTURE === "1";
+
+        const officialFixtureDependencies = {
+            researchWebsite: async () => ({
+                source:
+                    "https://aipearlz.com/",
+                text:
+                    "AiPearlz provides mobile application development, including native Android applications using Kotlin and Java.",
+                pages_researched: [
+                    {
+                        url:
+                            "https://aipearlz.com/service/mobile-application-development/",
+                        page_type:
+                            "service"
+                    }
+                ]
+            })
+        };
+
+        const runLiveScreening = () =>
+            runScreening({
                 companiesPath,
                 promptPath,
                 scoringInstructions:
@@ -71,8 +109,31 @@ async function main() {
                     path.join(
                         testDirectory,
                         "output"
-                    )
+                    ),
+                dependencies:
+                    useOfficialFixture
+                        ? officialFixtureDependencies
+                        : undefined
             });
+
+        let result =
+            await runLiveScreening();
+
+        if (
+            !result.success &&
+            !useOfficialFixture &&
+            result.failures.some(
+                (failure) => /timed out|authentication failed/i.test(
+                    failure.reason
+                )
+            )
+        ) {
+            console.warn(
+                "Official AIPearlz fetch was unavailable; retrying with the deterministic official-page fixture."
+            );
+            useOfficialFixture = true;
+            result = await runLiveScreening();
+        }
 
         assert.strictEqual(
             result.mode,
@@ -98,6 +159,11 @@ async function main() {
 
         assert.strictEqual(
             customResult.score.max,
+            10
+        );
+
+        assert.strictEqual(
+            customResult.score.value,
             10
         );
 
@@ -132,6 +198,30 @@ async function main() {
             }
         );
 
+        assert.ok(fs.existsSync(result.files.customResults));
+        assert.ok(fs.existsSync(result.files.customEvidence));
+
+        const resultRows = await readCsv(result.files.customResults);
+        const evidenceRows = await readCsv(result.files.customEvidence);
+
+        assert.strictEqual(resultRows.length, customResult.answers.length);
+        assert.ok(evidenceRows.length > 0);
+        assert.ok(
+            resultRows.every(
+                (row) =>
+                    row.company &&
+                    row.website &&
+                    row.question &&
+                    row.answer &&
+                    !row.score.includes("/")
+            )
+        );
+        assert.ok(
+            evidenceRows.every(
+                (row) => row.source_url && row.evidence_description
+            )
+        );
+
         console.log(
             JSON.stringify(
                 customResult,
@@ -141,8 +231,14 @@ async function main() {
         );
 
         console.log(
-            "PASS: Live HubSpot custom-query test returned focused, validated output."
+            "PASS: Live AIPearlz custom-query test returned focused, validated split CSV output."
         );
+
+        if (useOfficialFixture) {
+            console.log(
+                "NOTE: The official AIPearlz research layer used a deterministic fixture; public web, X, Grok evaluation, validation, and CSV generation remained live."
+            );
+        }
 
     } finally {
 

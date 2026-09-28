@@ -7,55 +7,77 @@ const {
 
 
 const CUSTOM_RESULT_HEADERS = [
+    { id: "company", title: "company" },
+    { id: "website", title: "website" },
+    { id: "question", title: "question" },
+    { id: "answer", title: "answer" },
+    { id: "score", title: "score" },
+    { id: "score_max", title: "score_max" },
+    { id: "score_reason", title: "score_reason" }
+];
+
+
+const CUSTOM_EVIDENCE_HEADERS = [
+    { id: "company", title: "company" },
+    { id: "website", title: "website" },
+    { id: "question", title: "question" },
+    { id: "source_url", title: "source_url" },
     {
         id:
-            "company",
+            "evidence_description",
         title:
-            "company"
-    },
-    {
-        id:
-            "website",
-        title:
-            "website"
-    },
-    {
-        id:
-            "question",
-        title:
-            "question"
-    },
-    {
-        id:
-            "answer",
-        title:
-            "answer"
-    },
-    {
-        id:
-            "source",
-        title:
-            "source"
-    },
-    {
-        id:
-            "description",
-        title:
-            "description"
-    },
-    {
-        id:
-            "score",
-        title:
-            "score"
-    },
-    {
-        id:
-            "score_reason",
-        title:
-            "score_reason"
+            "evidence_description"
     }
 ];
+
+
+function sanitizeSpreadsheetText(value) {
+
+    const text =
+        String(
+            value ??
+            ""
+        );
+
+    if (/^[=+\-@]/.test(text)) {
+        return `'${text}`;
+    }
+
+    return text;
+}
+
+
+function formatAnswerForCsv(value) {
+
+    const text =
+        String(
+            value ??
+            ""
+        ).trim();
+
+    const lines =
+        text
+            .split(/\r?\n/)
+            .map(
+                (line) =>
+                    line
+                        .trim()
+                        .replace(
+                            /^(?:[-*•]|\d+[.)])\s*/,
+                            ""
+                        )
+            )
+            .filter(Boolean);
+
+    const formatted =
+        lines.length > 1
+            ? lines.join("; ")
+            : text;
+
+    return sanitizeSpreadsheetText(
+        formatted
+    );
+}
 
 
 function buildCustomResultRows(results) {
@@ -68,76 +90,111 @@ function buildCustomResultRows(results) {
             result.answers.forEach(
                 (answer) => {
 
-                    const evidence =
-                        answer.evidence.length > 0
-                            ? answer.evidence
-                            : [
-                                {
-                                    source:
-                                        "",
-                                    description:
-                                        ""
-                                }
-                            ];
+                    rows.push({
+                        company:
+                            sanitizeSpreadsheetText(
+                                result.company
+                            ),
+                        website:
+                            result.website,
+                        question:
+                            sanitizeSpreadsheetText(
+                                answer.question
+                            ),
+                        answer:
+                            formatAnswerForCsv(
+                                answer.answer
+                            ),
+                        score:
+                            result.score
+                                ? result.score.value
+                                : "",
+                        score_max:
+                            result.score
+                                ? result.score.max
+                                : "",
+                        score_reason:
+                            result.score
+                                ? sanitizeSpreadsheetText(
+                                    result.score.reason
+                                )
+                                : ""
+                    });
+                }
+            );
+        }
+    );
 
-                    evidence.forEach(
+    return rows;
+}
+
+
+function buildCustomEvidenceRows(results) {
+
+    const rows = [];
+    const seen = new Set();
+
+    function addEvidence(
+        result,
+        question,
+        item
+    ) {
+
+        const key =
+            `${item.source}\u0000${item.description}`;
+
+        if (seen.has(key)) {
+            return;
+        }
+
+        seen.add(key);
+
+        rows.push({
+            company:
+                sanitizeSpreadsheetText(
+                    result.company
+                ),
+            website:
+                result.website,
+            question:
+                sanitizeSpreadsheetText(
+                    question
+                ),
+            source_url:
+                item.source,
+            evidence_description:
+                sanitizeSpreadsheetText(
+                    item.description
+                )
+        });
+    }
+
+    results.forEach(
+        (result) => {
+
+            result.answers.forEach(
+                (answer) => {
+
+                    answer.evidence.forEach(
                         (item) => {
-
-                            rows.push({
-                                company:
-                                    result.company,
-                                website:
-                                    result.website,
-                                question:
-                                    answer.question,
-                                answer:
-                                    answer.answer,
-                                source:
-                                    item.source,
-                                description:
-                                    item.description,
-                                score:
-                                    result.score
-                                        ? `${result.score.value}/${result.score.max}`
-                                        : "",
-                                score_reason:
-                                    result.score?.reason ||
-                                    ""
-                            });
+                            addEvidence(
+                                result,
+                                answer.question,
+                                item
+                            );
                         }
                     );
                 }
             );
 
-            if (
-                result.score &&
-                Array.isArray(
-                    result.score.evidence
-                )
+            for (
+                const item
+                of result.score?.evidence || []
             ) {
-
-                result.score.evidence.forEach(
-                    (item) => {
-
-                        rows.push({
-                            company:
-                                result.company,
-                            website:
-                                result.website,
-                            question:
-                                "Scoring evidence",
-                            answer:
-                                result.score.reason,
-                            source:
-                                item.source,
-                            description:
-                                item.description,
-                            score:
-                                `${result.score.value}/${result.score.max}`,
-                            score_reason:
-                                result.score.reason
-                        });
-                    }
+                addEvidence(
+                    result,
+                    "Scoring evidence",
+                    item
                 );
             }
         }
@@ -147,8 +204,31 @@ function buildCustomResultRows(results) {
 }
 
 
-async function writeCustomQueryResults(
+async function writeCsv(
     filePath,
+    headers,
+    rows
+) {
+
+    const writer =
+        createObjectCsvWriter({
+            path:
+                filePath,
+            header:
+                headers,
+            encoding:
+                "utf8"
+        });
+
+    await writer.writeRecords(
+        rows
+    );
+}
+
+
+async function writeCustomQueryResults(
+    resultsPath,
+    evidencePath,
     results
 ) {
 
@@ -162,50 +242,66 @@ async function writeCustomQueryResults(
         return {
             written:
                 0,
-            filePath:
+            resultsPath:
                 null,
-            rowsWritten:
+            evidencePath:
+                null,
+            resultRowsWritten:
+                0,
+            evidenceRowsWritten:
                 0
         };
     }
 
     fs.mkdirSync(
-        path.dirname(filePath),
+        path.dirname(resultsPath),
         {
             recursive:
                 true
         }
     );
 
-    const rows =
+    const resultRows =
         buildCustomResultRows(
             results
         );
 
-    const writer =
-        createObjectCsvWriter({
-            path:
-                filePath,
-            header:
-                CUSTOM_RESULT_HEADERS
-        });
+    const evidenceRows =
+        buildCustomEvidenceRows(
+            results
+        );
 
-    await writer.writeRecords(
-        rows
+    await writeCsv(
+        resultsPath,
+        CUSTOM_RESULT_HEADERS,
+        resultRows
+    );
+
+    await writeCsv(
+        evidencePath,
+        CUSTOM_EVIDENCE_HEADERS,
+        evidenceRows
     );
 
     return {
         written:
             results.length,
-        filePath,
-        rowsWritten:
-            rows.length
+        resultsPath,
+        evidencePath,
+        resultRowsWritten:
+            resultRows.length,
+        evidenceRowsWritten:
+            evidenceRows.length
     };
 }
 
 
 module.exports = {
     CUSTOM_RESULT_HEADERS,
+    CUSTOM_EVIDENCE_HEADERS,
+    sanitizeSpreadsheetText,
+    formatAnswerForCsv,
     buildCustomResultRows,
+    buildCustomEvidenceRows,
     writeCustomQueryResults
 };
