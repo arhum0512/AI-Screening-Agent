@@ -10,6 +10,13 @@ const {
     runScreening
 } = require("./src/screeningPipeline");
 
+const {
+    readResearchSources,
+    addResearchSource,
+    deleteResearchSource,
+    resolveResearchSources
+} = require("./src/researchSourceRegistry");
+
 
 const app = express();
 
@@ -334,6 +341,68 @@ app.get(
 
 
 // --------------------------------------------------
+// Dynamic research source registry
+// --------------------------------------------------
+
+app.get(
+    "/api/research-sources",
+    (req, res) => {
+        try {
+            return res.json({
+                success: true,
+                sources: readResearchSources()
+            });
+        } catch (error) {
+            return res.status(500).json({
+                success: false,
+                message: error.message
+            });
+        }
+    }
+);
+
+
+app.post(
+    "/api/research-sources",
+    async (req, res) => {
+        try {
+            const source = await addResearchSource(req.body);
+
+            return res.status(201).json({
+                success: true,
+                source
+            });
+        } catch (error) {
+            return res.status(400).json({
+                success: false,
+                message: error.message
+            });
+        }
+    }
+);
+
+
+app.delete(
+    "/api/research-sources/:id",
+    async (req, res) => {
+        try {
+            const source = await deleteResearchSource(req.params.id);
+
+            return res.json({
+                success: true,
+                source
+            });
+        } catch (error) {
+            return res.status(error.status || 400).json({
+                success: false,
+                message: error.message
+            });
+        }
+    }
+);
+
+
+// --------------------------------------------------
 // Downloadable screening files
 // --------------------------------------------------
 
@@ -492,6 +561,17 @@ app.post(
             req.body?.scoringText?.trim() ||
             "";
 
+        let selectedSourceIds;
+
+        try {
+            selectedSourceIds =
+                typeof req.body?.selectedSources === "string"
+                    ? JSON.parse(req.body.selectedSources)
+                    : req.body?.selectedSources;
+        } catch (error) {
+            selectedSourceIds = null;
+        }
+
 
         let companiesPath =
             null;
@@ -510,6 +590,17 @@ app.post(
             null;
 
         try {
+
+            let selectedSources;
+
+            try {
+                selectedSources = resolveResearchSources(selectedSourceIds);
+            } catch (error) {
+                return res.status(400).json({
+                    success: false,
+                    message: error.message
+                });
+            }
 
             // --------------------------------------------------
             // Validate company input
@@ -758,6 +849,8 @@ app.post(
                     scoringInstructions:
                         scoringText,
 
+                    selectedSources,
+
                     outputDirectory:
                         dashboardOutputDirectory
                 });
@@ -829,6 +922,9 @@ app.post(
 
                 configSources:
                     result.configSources,
+
+                selectedSources:
+                    result.selectedSources,
 
                 results:
                     result.mode === "custom_query"
@@ -1042,9 +1138,10 @@ app.use(
 // Start server
 // --------------------------------------------------
 
-app.listen(
-    PORT,
-    () => {
+if (require.main === module) {
+    app.listen(
+        PORT,
+        () => {
 
         console.log(
             `Backend server running on http://localhost:${PORT}`
@@ -1067,5 +1164,10 @@ app.listen(
                 "React production build not found. Run npm run build inside frontend."
             );
         }
-    }
-);
+        }
+    );
+}
+
+module.exports = {
+    app
+};

@@ -126,6 +126,14 @@ const tests = [
 
         file:
             "testCustomModes.js"
+    },
+
+    {
+        name:
+            "Dynamic Research Sources",
+
+        file:
+            "testResearchSources.js"
     }
 ];
 

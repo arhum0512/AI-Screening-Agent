@@ -223,7 +223,10 @@ function extractSources(response) {
 }
 
 
-function buildPublicResearchPrompt(company) {
+function buildPublicResearchPrompt(
+    company,
+    source = null
+) {
 
     const website =
         company?.website ||
@@ -235,6 +238,11 @@ function buildPublicResearchPrompt(company) {
         "";
 
 
+    const sourceInstructions =
+        source?.domain
+            ? `Research only ${source.name} (${source.domain}). Use results from that domain only. Do not use the company website or any other platform unless it is hosted on ${source.domain}.`
+            : `Research across the public web. Broad public URLs are allowed, but do not use X Search.`;
+
     return `
 Research this company using current public web sources.
 
@@ -244,21 +252,13 @@ ${companyName || "Unknown"}
 Website:
 ${website}
 
+SOURCE SCOPE
+
+${sourceInstructions}
+
 SEARCH REQUIREMENTS
 
-Research across the public web and actively look for evidence from these source types where available:
-
-1. Official company website
-2. General web/search results
-3. Clutch
-4. Trustpilot
-5. Crunchbase
-6. LinkedIn company profile
-7. Google Business Profile or other public business-listing information
-8. Recent news and press releases
-9. Hiring/careers activity
-10. Public social-media or activity signals visible through web search
-11. Other credible and relevant public sources
+Search only within the source scope above. Do not broaden the search to other platforms.
 
 IMPORTANT SIGNALS TO LOOK FOR
 
@@ -323,27 +323,50 @@ Return a concise but useful research brief.
 }
 
 
+function urlMatchesDomain(url, domain) {
+    if (!domain) {
+        return true;
+    }
+
+    try {
+        const hostname = new URL(url).hostname.replace(/^www\./, "").toLowerCase();
+        return hostname === domain || hostname.endsWith(`.${domain}`);
+    } catch (error) {
+        return false;
+    }
+}
+
+
 async function researchPublicWeb(
-    company
+    company,
+    options = {}
 ) {
 
     const client =
+        options.client ||
         createGrokClient();
 
 
     const model =
+        options.model ||
         process.env.GROK_MODEL ||
         "grok-4.7";
 
 
     const prompt =
         buildPublicResearchPrompt(
-            company
+            company,
+            options.source
         );
 
 
     const maxAttempts =
+        options.maxAttempts ||
         3;
+
+    const domain =
+        options.source?.domain ||
+        null;
 
 
     for (
@@ -375,10 +398,20 @@ async function researchPublicWeb(
                     ],
 
                     tools: [
-                        {
-                            type:
-                                "web_search"
-                        }
+                        domain
+                            ? {
+                                type:
+                                    "web_search",
+                                filters: {
+                                    allowed_domains: [
+                                        domain
+                                    ]
+                                }
+                            }
+                            : {
+                                type:
+                                    "web_search"
+                            }
                     ],
 
                     include: [
@@ -406,6 +439,12 @@ async function researchPublicWeb(
             const sources =
                 extractSources(
                     response
+                ).filter(
+                    (source) =>
+                        urlMatchesDomain(
+                            source.url,
+                            domain
+                        )
                 );
 
 
@@ -491,6 +530,8 @@ module.exports = {
     researchPublicWeb,
 
     buildPublicResearchPrompt,
+
+    urlMatchesDomain,
 
     extractResponseText,
 

@@ -415,6 +415,10 @@ Stale-output protection was verified by running a zero-success Canva batch and c
 
 Current V1 Limitations
 
+Research source registry persistence
+
+The dashboard loads research sources from `config/research-sources.json` and updates that file with validated atomic writes. Set `RESEARCH_SOURCES_PATH` to move the registry elsewhere. Local changes survive process restarts. Render's default filesystem is ephemeral, so production additions and deletions can be lost when an instance is replaced or redeployed. For durable production persistence, attach a Render persistent disk and set `RESEARCH_SOURCES_PATH` to a file on that mount (for example `/var/data/research-sources.json`), seeding the file from the committed registry before the first start.
+
 Research is primarily limited to company-owned website pages.
 
 JavaScript-heavy websites may not expose all content.

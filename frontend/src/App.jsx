@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   UploadCloud,
@@ -14,12 +14,20 @@ import {
   AlertCircle,
   LoaderCircle,
   Globe2,
-  Download
+  Download,
+  ChevronDown,
+  Plus,
+  Search,
+  Trash2,
+  X
 } from "lucide-react";
 
 import {
   CustomQuerySummary
 } from "./CustomQuerySummary";
+import {
+  ConfirmModal
+} from "./components/ConfirmModal";
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "";
 function App() {
@@ -42,9 +50,59 @@ function App() {
 
   const [screeningResult, setScreeningResult] = useState(null);
 
+  const [researchSources, setResearchSources] = useState([]);
+  const [selectedSourceIds, setSelectedSourceIds] = useState([]);
+  const [sourcesLoading, setSourcesLoading] = useState(true);
+  const [sourcesOpen, setSourcesOpen] = useState(false);
+  const [sourceFilter, setSourceFilter] = useState("");
+  const [showAddSource, setShowAddSource] = useState(false);
+  const [newSource, setNewSource] = useState({
+    name: "",
+    domain: ""
+  });
+  const [sourceMutationPending, setSourceMutationPending] = useState(false);
+  const [sourcePendingDeletion, setSourcePendingDeletion] = useState(null);
+  const [sourceDeletePending, setSourceDeletePending] = useState(false);
+
   const companiesInputRef = useRef(null);
   const promptInputRef = useRef(null);
   const scoringInputRef = useRef(null);
+
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadResearchSources() {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/research-sources`);
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || "Unable to load research sources.");
+        }
+
+        if (active) {
+          setResearchSources(data.sources || []);
+          setSelectedSourceIds((data.sources || []).map((source) => source.id));
+        }
+      } catch (error) {
+        if (active) {
+          setMessageType("error");
+          setMessage(error.message || "Unable to load research sources.");
+        }
+      } finally {
+        if (active) {
+          setSourcesLoading(false);
+        }
+      }
+    }
+
+    loadResearchSources();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
 
   function clearResult() {
@@ -166,6 +224,85 @@ function App() {
   }
 
 
+  function toggleResearchSource(sourceId) {
+    setSelectedSourceIds((current) =>
+      current.includes(sourceId)
+        ? current.filter((id) => id !== sourceId)
+        : [...current, sourceId]
+    );
+    clearResult();
+  }
+
+
+  async function handleAddResearchSource(event) {
+    event.preventDefault();
+
+    try {
+      setSourceMutationPending(true);
+
+      const response = await fetch(`${API_BASE_URL}/api/research-sources`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newSource)
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Unable to add the research source.");
+      }
+
+      setResearchSources((current) => [...current, data.source]);
+      setSelectedSourceIds((current) => [...current, data.source.id]);
+      setNewSource({ name: "", domain: "" });
+      setShowAddSource(false);
+      setMessageType("success");
+      setMessage(`${data.source.name} was added and selected.`);
+      setScreeningResult(null);
+    } catch (error) {
+      setMessageType("error");
+      setMessage(error.message || "Unable to add the research source.");
+    } finally {
+      setSourceMutationPending(false);
+    }
+  }
+
+
+  async function confirmDeleteResearchSource() {
+    const source = sourcePendingDeletion;
+
+    if (!source || sourceDeletePending) {
+      return;
+    }
+
+    try {
+      setSourceDeletePending(true);
+
+      const response = await fetch(
+        `${API_BASE_URL}/api/research-sources/${encodeURIComponent(source.id)}`,
+        { method: "DELETE" }
+      );
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Unable to remove the research source.");
+      }
+
+      setResearchSources((current) => current.filter((item) => item.id !== source.id));
+      setSelectedSourceIds((current) => current.filter((id) => id !== source.id));
+      setMessageType("success");
+      setMessage(`${source.name} was removed.`);
+      setScreeningResult(null);
+      setSourcePendingDeletion(null);
+    } catch (error) {
+      setMessageType("error");
+      setMessage(error.message || "Unable to remove the research source.");
+      setSourcePendingDeletion(null);
+    } finally {
+      setSourceDeletePending(false);
+    }
+  }
+
+
   async function handleRunScreening() {
     if (!hasCompanyInput()) {
       setMessageType("error");
@@ -176,6 +313,13 @@ function App() {
           : "Please enter at least one website first."
       );
 
+      return;
+    }
+
+
+    if (selectedSourceIds.length === 0) {
+      setMessageType("error");
+      setMessage("Please select at least one research source.");
       return;
     }
 
@@ -243,6 +387,11 @@ function App() {
 
     const formData =
       new FormData();
+
+    formData.append(
+      "selectedSources",
+      JSON.stringify(selectedSourceIds)
+    );
 
 
     if (
@@ -735,6 +884,199 @@ function App() {
         </section>
 
 
+        {/* Research Sources */}
+        <section className="relative mt-6 rounded-3xl border border-cyan-200/80 bg-white/80 p-6 shadow-2xl shadow-blue-900/10">
+
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-700">
+                <Search size={21} />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-slate-950">
+                  Research Sources
+                </h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  {selectedSourceIds.length} selected for this run
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              disabled={sourcesLoading || isSubmitting}
+              onClick={() => setSourcesOpen((open) => !open)}
+              className="inline-flex items-center justify-between gap-3 rounded-xl border border-cyan-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-cyan-400 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {sourcesLoading ? "Loading sources..." : "Select sources"}
+              <ChevronDown
+                size={17}
+                className={`transition ${sourcesOpen ? "rotate-180" : ""}`}
+              />
+            </button>
+
+          </div>
+
+
+          <div className="mt-5 flex min-h-10 flex-wrap gap-2">
+            {researchSources
+              .filter((source) => selectedSourceIds.includes(source.id))
+              .map((source) => (
+                <button
+                  key={source.id}
+                  type="button"
+                  disabled={isSubmitting}
+                  onClick={() => toggleResearchSource(source.id)}
+                  className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs font-semibold text-cyan-900 transition hover:bg-cyan-100"
+                  title={`Remove ${source.name} from this run`}
+                >
+                  {source.name}
+                  <X size={14} />
+                </button>
+              ))}
+
+            {!sourcesLoading && selectedSourceIds.length === 0 && (
+              <p className="py-2 text-sm font-medium text-red-600">
+                Please select at least one research source.
+              </p>
+            )}
+          </div>
+
+
+          {sourcesOpen && (
+            <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-900/10">
+
+              <div className="border-b border-slate-200 p-4">
+                <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                  <Search size={16} className="text-slate-400" />
+                  <input
+                    value={sourceFilter}
+                    onChange={(event) => setSourceFilter(event.target.value)}
+                    placeholder="Filter sources"
+                    className="w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
+                  />
+                </div>
+              </div>
+
+              <div className="max-h-72 overflow-y-auto p-2">
+                {researchSources
+                  .filter((source) =>
+                    source.name.toLowerCase().includes(sourceFilter.trim().toLowerCase()) ||
+                    (source.domain || "").includes(sourceFilter.trim().toLowerCase())
+                  )
+                  .map((source) => (
+                    <div
+                      key={source.id}
+                      className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-slate-50"
+                    >
+                      <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedSourceIds.includes(source.id)}
+                          disabled={isSubmitting || sourceMutationPending || sourceDeletePending}
+                          onChange={() => toggleResearchSource(source.id)}
+                          className="h-4 w-4 rounded border-slate-300 text-cyan-600"
+                        />
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-semibold text-slate-900">
+                            {source.name}
+                          </span>
+                          <span className="block truncate text-xs text-slate-500">
+                            {source.domain || source.type.replaceAll("_", " ")}
+                          </span>
+                        </span>
+                      </label>
+                      <button
+                        type="button"
+                        disabled={isSubmitting || sourceMutationPending || sourceDeletePending}
+                        onClick={() => setSourcePendingDeletion(source)}
+                        className="rounded-lg p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-40"
+                        aria-label={`Delete ${source.name}`}
+                        title={`Delete ${source.name}`}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))}
+
+                {!sourcesLoading && researchSources.length === 0 && (
+                  <p className="px-3 py-6 text-center text-sm text-slate-500">
+                    No sources are available. Add a platform below.
+                  </p>
+                )}
+              </div>
+
+              <div className="border-t border-slate-200 p-3">
+                <button
+                  type="button"
+                  disabled={isSubmitting || sourceMutationPending}
+                  onClick={() => setShowAddSource((show) => !show)}
+                  className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold text-cyan-700 transition hover:bg-cyan-50"
+                >
+                  <Plus size={17} />
+                  Add Custom Platform
+                </button>
+              </div>
+
+            </div>
+          )}
+
+
+          {showAddSource && (
+            <form
+              onSubmit={handleAddResearchSource}
+              className="mt-4 grid gap-4 rounded-2xl border border-cyan-200 bg-cyan-50/50 p-5 md:grid-cols-2"
+            >
+              <label className="text-sm font-semibold text-slate-800">
+                Platform Name
+                <input
+                  required
+                  maxLength={80}
+                  value={newSource.name}
+                  onChange={(event) => setNewSource({ ...newSource, name: event.target.value })}
+                  placeholder="Product Hunt"
+                  className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 font-normal outline-none focus:border-cyan-400"
+                />
+              </label>
+
+              <label className="text-sm font-semibold text-slate-800">
+                Domain / Website
+                <input
+                  value={newSource.domain}
+                  onChange={(event) => setNewSource({ ...newSource, domain: event.target.value })}
+                  placeholder="producthunt.com"
+                  className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 font-normal outline-none focus:border-cyan-400"
+                />
+                <span className="mt-2 block text-xs font-normal text-slate-500">
+                  Required for domain platforms. Special sources such as Company Website can leave this blank.
+                </span>
+              </label>
+
+              <div className="flex gap-3 md:col-span-2">
+                <button
+                  type="submit"
+                  disabled={sourceMutationPending}
+                  className="inline-flex items-center gap-2 rounded-xl bg-cyan-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-cyan-700 disabled:opacity-50"
+                >
+                  {sourceMutationPending ? <LoaderCircle size={16} className="animate-spin" /> : <Plus size={16} />}
+                  Add Platform
+                </button>
+                <button
+                  type="button"
+                  disabled={sourceMutationPending}
+                  onClick={() => setShowAddSource(false)}
+                  className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          )}
+
+        </section>
+
+
         {/* Configuration */}
         <section className="mt-6 grid gap-6 xl:grid-cols-2">
 
@@ -1075,7 +1417,7 @@ If there is no evidence of Android application development, score 0.`}
           </div>
 
 
-          <div className="grid gap-4 lg:grid-cols-3">
+          <div className="grid gap-4 lg:grid-cols-4">
 
             <div className="rounded-2xl border border-slate-200/80 bg-white/85 px-5 py-4">
 
@@ -1133,6 +1475,21 @@ If there is no evidence of Android application development, score 0.`}
                       ? "Manual Scoring"
                       : "Scoring not written"}
 
+              </p>
+
+            </div>
+
+
+            <div className="rounded-2xl border border-slate-200/80 bg-white/85 px-5 py-4">
+
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-9500">
+                Sources
+              </p>
+
+              <p className="mt-3 text-sm font-semibold text-slate-900">
+                {selectedSourceIds.length > 0
+                  ? `${selectedSourceIds.length} selected`
+                  : "None selected"}
               </p>
 
             </div>
@@ -1642,9 +1999,9 @@ If there is no evidence of Android application development, score 0.`}
             <button
               type="button"
               onClick={handleRunScreening}
-              disabled={!hasCompanyInput() || isSubmitting}
+              disabled={!hasCompanyInput() || selectedSourceIds.length === 0 || sourcesLoading || isSubmitting}
               className={`group inline-flex min-w-52 items-center justify-center gap-3 rounded-2xl px-6 py-4 text-sm font-bold transition ${
-                hasCompanyInput() && !isSubmitting
+                hasCompanyInput() && selectedSourceIds.length > 0 && !sourcesLoading && !isSubmitting
                   ? "bg-gradient-to-r from-blue-500 via-indigo-500 to-cyan-500 text-white shadow-xl shadow-blue-500/25 hover:scale-[1.02]"
                   : "cursor-not-allowed border border-slate-200 bg-white/60 text-slate-400"
               }`}
@@ -1704,6 +2061,28 @@ If there is no evidence of Android application development, score 0.`}
         </footer>
 
       </div>
+
+
+      <ConfirmModal
+        open={Boolean(sourcePendingDeletion)}
+        title="Remove Platform?"
+        confirmLabel="Remove"
+        loadingLabel="Removing..."
+        loading={sourceDeletePending}
+        onCancel={() => setSourcePendingDeletion(null)}
+        onConfirm={confirmDeleteResearchSource}
+      >
+        <p>
+          Are you sure you want to remove{" "}
+          <span className="font-bold text-slate-900">
+            “{sourcePendingDeletion?.name}”
+          </span>{" "}
+          from the research source list?
+        </p>
+        <p className="mt-3">
+          This action removes the platform from the available research sources and from the current selection.
+        </p>
+      </ConfirmModal>
 
     </div>
   );

@@ -1,0 +1,38 @@
+[
+  {
+    "id": "company-website",
+    "name": "Company Website",
+    "domain": null,
+    "type": "company_website"
+  },
+  {
+    "id": "general-web-search",
+    "name": "General Web Search",
+    "domain": null,
+    "type": "general_web"
+  },
+  {
+    "id": "linkedin",
+    "name": "LinkedIn",
+    "domain": "linkedin.com",
+    "type": "web"
+  },
+  {
+    "id": "crunchbase",
+    "name": "Crunchbase",
+    "domain": "crunchbase.com",
+    "type": "web"
+  },
+  {
+    "id": "google-business-profile",
+    "name": "Google Business Profile / Public Listings",
+    "domain": "google.com",
+    "type": "web"
+  },
+  {
+    "id": "x-twitter",
+    "name": "X / Twitter",
+    "domain": "x.com",
+    "type": "x"
+  }
+]

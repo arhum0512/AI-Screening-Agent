@@ -69,6 +69,18 @@ async function runScreening(options = {}) {
         options.dependencies ||
         {};
 
+    const selectedSources =
+        options.selectedSources;
+
+    if (
+        Array.isArray(selectedSources) &&
+        selectedSources.length === 0
+    ) {
+        throw new Error(
+            "Please select at least one research source."
+        );
+    }
+
 
     const promptPath =
         options.promptPath ||
@@ -342,6 +354,7 @@ async function runScreening(options = {}) {
             const combinedResearch =
                 await researchAllSources(
                     company,
+                    selectedSources,
                     dependencies
                 );
 
@@ -747,6 +760,18 @@ async function runScreening(options = {}) {
                         scoringInstructions
                     )
             },
+
+        selectedSources:
+            Array.isArray(selectedSources)
+                ? selectedSources.map(
+                    (source) => ({
+                        id: source.id,
+                        name: source.name,
+                        domain: source.domain,
+                        type: source.type
+                    })
+                )
+                : [],
 
         results:
             screeningResults,
